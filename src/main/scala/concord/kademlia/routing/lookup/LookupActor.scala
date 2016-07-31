@@ -13,9 +13,9 @@ class LookupActor(kBucketActor: ActorRef) extends FSM[State, Data] {
     startWith(Initial, Empty)
 
     when(Initial) {
-        case request @ Event(FindClosest(searchId), _) =>
+        case Event(request: FindClosest, _) =>
             kBucketActor forward request
-            goto(WaitForLocalNodes) using Lookup(searchId, sender)
+            goto(WaitForLocalNodes) using Lookup(request.sender, sender)
     }
 
     when(WaitForLocalNodes) {

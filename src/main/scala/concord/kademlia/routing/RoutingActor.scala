@@ -5,7 +5,8 @@ import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.routing.lookup.LookupActor
 import concord.kademlia.routing.dht.KBucketActor
-import concord.util.Logging
+import concord.kademlia.routing.dht.KBucketActor.Add
+import concord.util.{Host, Logging}
 
 
 class RoutingActor(nodeId: NodeId)(implicit val config: ConcordConfig) extends Actor with Logging {
@@ -16,9 +17,10 @@ class RoutingActor(nodeId: NodeId)(implicit val config: ConcordConfig) extends A
     private val kBucketActor = context.system.actorOf(Props(newKBucketActor(nodeId)))
 
     override def receive = {
-        case PingRequest =>
-            sender ! PongReply
-        case request @ FindClosest(nodeId) =>
+        case PingRequest(senderId) =>
+            kBucketActor ! Add(RemoteNode(Host(sender().path.address.hostPort), senderId))
+            sender ! PongReply(nodeId)
+        case request @ FindClosest(findNodeId) =>
             context.system.actorOf(Props(newLookupActor(kBucketActor))) forward request
     }
 

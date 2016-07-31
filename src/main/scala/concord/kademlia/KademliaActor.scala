@@ -39,10 +39,16 @@ object KademliaActor {
 class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends FSM[State, Data] {
     self: RoutingActor.Provider =>
 
-    startWith(Running, Empty)
-
     protected val routingActor = context.system.actorOf(Props(newRoutingActor(nodeId)))
     protected val storeActor = context.system.actorOf(Props(new StoreActor[V] with InMemoryStore[V]))
+
+    startWith(Running, Empty)
+
+    when(Running) {
+        case request: Event =>
+            routingActor forward request
+            stay
+    }
 
 }
 
@@ -74,7 +80,7 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
             }
             stay
         case Event(actorRef: ActorRef, Empty) =>
-            actorRef ! PingRequest
+            actorRef ! PingRequest(nodeId)
             goto(Joining)
     }
 
