@@ -1,6 +1,7 @@
 package concord.kademlia
 
-import akka.actor.{Actor, ActorRef, FSM, Props}
+import akka.actor.{ActorRef, FSM, Props}
+import akka.util.Timeout
 import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.KademliaActor._
@@ -9,10 +10,14 @@ import concord.kademlia.routing.RoutingMessages.{FindClosest, PingRequest, PongR
 import concord.kademlia.store.{InMemoryStore, StoreActor}
 import concord.util.Host
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 
 object KademliaActor {
+
+    case object Init
 
     trait State
     case object Running extends State
@@ -26,6 +31,8 @@ object KademliaActor {
     }
 
     val nodeName = "concordKademlia"
+
+    implicit val timeout: Timeout = FiniteDuration(30, SECONDS)
 
 }
 
