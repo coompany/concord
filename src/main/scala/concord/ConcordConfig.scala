@@ -3,14 +3,16 @@ package concord
 import com.typesafe.config.ConfigFactory
 
 
-case class ConcordConfig(nodeId: String)
+case class ConcordConfig(nodeId: String, hostname: String, port: Int)
 
-case object ConcordConfig {
+object ConcordConfig {
 
     val config = ConfigFactory.load
 
     def fromFile: ConcordConfig = ConcordConfig(
-        config.getString("concord.identity.nodeId")
+        config.getString("concord.identity.nodeId"),
+        config.getString("akka.remote.netty.udp.hostname"),
+        config.getInt("akka.remote.netty.udp.port")
     )
 
 }

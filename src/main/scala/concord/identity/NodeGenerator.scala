@@ -1,10 +1,9 @@
 package concord.identity
 
-import java.security.{MessageDigest, SecureRandom}
+import java.net.{InetAddress, NetworkInterface}
+import java.security.MessageDigest
 
 import concord.util.time.Clock
-
-import scala.util.Random
 
 
 class NodeGenerator private (md: MessageDigest) {
@@ -17,7 +16,11 @@ class NodeGenerator private (md: MessageDigest) {
         NodeId(md.digest(input))
     }
 
-    def generateId: NodeId = generateId((getTime & Random.nextLong()).toString.getBytes())
+    def generateId(hostname: String, port: Int): NodeId = {
+        val ip = InetAddress.getByName(hostname)
+        val net = NetworkInterface.getByInetAddress(ip)
+        generateId(net.getHardwareAddress ++ ip.getAddress ++ port.toString.getBytes ++ getTime.toString.getBytes)
+    }
 
 }
 

@@ -10,12 +10,12 @@ class Concord(config: ConcordConfig) {
 
     val log = LoggerFactory.getLogger(getClass)
 
+    private val actorSystem = ActorSystem("concord-actor-system")
+
     val nodeId = config.nodeId match {
-        case s if s.isEmpty => NodeId()
+        case s if s.isEmpty => NodeId(config.hostname, config.port)
         case s: String => NodeId(s)
     }
-
-    private val actorSystem = ActorSystem("concord-actor-system")
 
     private val kadNode = actorSystem.actorOf(Props(new KademliaActor))
 

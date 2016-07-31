@@ -40,6 +40,6 @@ case object NodeId {
         NodeId(decVal, byteArray.length * 8)
     }
 
-    def apply(): NodeId = nodeGenerator.generateId
+    def apply(hostname: String, port: Int): NodeId = nodeGenerator.generateId(hostname, port)
 
 }
