@@ -1,5 +1,9 @@
 package concord.identity
 
+import concord.util.Host
+
+import scala.annotation.tailrec
+
 
 case class NodeId(id: BigInt, size: Int) {
 
@@ -15,6 +19,30 @@ case class NodeId(id: BigInt, size: Int) {
         case that: NodeId => size == that.size && id == that.id
         case _ => false
     }
+
+    def findNonMatchingFromRight(other: NodeId) = foldRight(List.empty[Int]) {
+        case (bit, list) => if (isBitSet(bit) != other.isBitSet(bit)) (bit - 1) :: list else list
+    }
+
+    def isBitSet(bit: Int) = id.testBit(bit - 1)
+
+    def distance(other: NodeId) = NodeId(id ^ other.id, size)
+
+    def longestPrefixLength(node: NodeId): Int = {
+        val dist = distance(node)
+        @tailrec def _longestPrefixLength(bit: Int): Int = bit match {
+            case 0 => dist.size
+            case _ if dist.isBitSet(bit) => dist.size - bit
+            case _ => _longestPrefixLength(bit - 1)
+        }
+        _longestPrefixLength(dist.size)
+    }
+
+    private def foldRight[T](acc: T, start: Int = 0)(op: (Int, T) => T): T = {
+        @tailrec def _foldRight(bit: Int, acc: T): T = if (bit == size) acc else _foldRight(bit + 1, op(bit, acc))
+        _foldRight(start, acc)
+    }
+
 }
 
 case object NodeId {
@@ -40,6 +68,6 @@ case object NodeId {
         NodeId(decVal, byteArray.length * 8)
     }
 
-    def apply(hostname: String, port: Int): NodeId = nodeGenerator.generateId(hostname, port)
+    def apply(host: Host): NodeId = nodeGenerator.generateId(host.hostname, host.port)
 
 }

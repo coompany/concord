@@ -19,7 +19,11 @@ class NodeGenerator private (md: MessageDigest) {
     def generateId(hostname: String, port: Int): NodeId = {
         val ip = InetAddress.getByName(hostname)
         val net = NetworkInterface.getByInetAddress(ip)
-        generateId(net.getHardwareAddress ++ ip.getAddress ++ port.toString.getBytes ++ getTime.toString.getBytes)
+        val mac = net.getHardwareAddress match {
+            case bytes: Array[Byte] => bytes
+            case _ => "loopback".getBytes
+        }
+        generateId(mac ++ ip.getAddress ++ port.toString.getBytes ++ getTime.toString.getBytes)
     }
 
 }
