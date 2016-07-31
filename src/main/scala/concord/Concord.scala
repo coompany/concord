@@ -3,7 +3,6 @@ package concord
 import akka.actor.{ActorSystem, Props}
 import concord.identity.NodeId
 import concord.kademlia.JoiningKadActor
-import concord.kademlia.KademliaActor.Init
 import concord.kademlia.routing.RemoteNode
 import org.slf4j.LoggerFactory
 
@@ -22,12 +21,10 @@ class Concord(config: ConcordConfig) {
 
     val remoteNode = RemoteNode(config.host, nodeId)
 
-    private val kadNode = config.existingNode match {
+    config.existingNode match {
         case Some(node) => actorSystem.actorOf(Props(newJoiningKademliaActor[Int](nodeId, node)(config)))
         case _ => actorSystem.actorOf(Props(newKademliaActor[Int](nodeId)(config)))
     }
-
-    kadNode ! Init
 
 }
 
