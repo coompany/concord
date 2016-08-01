@@ -4,7 +4,12 @@ import com.typesafe.config.ConfigFactory
 import concord.util.Host
 
 
-case class ConcordConfig(nodeId: String, systemName: String, host: Host, bucketsCapacity: Int, existingNode: Option[Host])
+case class ConcordConfig(nodeId: String,
+                         systemName: String,
+                         host: Host,
+                         bucketsCapacity: Int,
+                         existingNode: Option[Host],
+                         alpha: Int)
 
 object ConcordConfig {
 
@@ -15,7 +20,8 @@ object ConcordConfig {
         config.getString("concord.routing.name"),
         Host(config.getString("akka.remote.netty.udp.hostname"), config.getInt("akka.remote.netty.udp.port")),
         config.getInt("concord.routing.bucketsCapacity"),
-        Some(Host(config.getString("concord.bootstrap.hostname"), config.getInt("concord.bootstrap.port")))
+        Some(Host(config.getString("concord.bootstrap.hostname"), config.getInt("concord.bootstrap.port"))),
+        config.getInt("concord.routing.alpha")
     )
 
 }

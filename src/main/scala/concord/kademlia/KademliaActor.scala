@@ -5,7 +5,7 @@ import akka.util.Timeout
 import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.KademliaActor._
-import concord.kademlia.routing.RoutingMessages.{FindClosest, PingRequest, PongReply}
+import concord.kademlia.routing.RoutingMessages.{FindNode, FindNodeReply, PingRequest, PongReply}
 import concord.kademlia.routing.{ActorNode, RoutingActor}
 import concord.kademlia.store.{InMemoryStore, StoreActor}
 import concord.util.Host
@@ -88,8 +88,10 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
 
     when(Joining) {
         case Event(PongReply, Empty) =>
-            routingActor ! FindClosest(selfNode)
+            routingActor ! FindNode(selfNode, selfNode.nodeId)
             stay
+        case Event(reply: FindNodeReply, Empty) =>
+            goto(Running)
     }
 
 }

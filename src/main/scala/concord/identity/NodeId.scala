@@ -43,6 +43,16 @@ case class NodeId(id: BigInt, size: Int) {
         _foldRight(start, acc)
     }
 
+    class SelfOrder extends Ordering[NodeId] { // closeness relative to "this" id
+
+        override def compare(x: NodeId, y: NodeId) = {
+            val xDistInt = distance(x).id
+            val yDistInt = distance(y).id
+
+            xDistInt.compare(yDistInt)
+        }
+    }
+
 }
 
 case object NodeId {
