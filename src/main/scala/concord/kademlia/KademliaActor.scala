@@ -47,6 +47,9 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
     startWith(Running, Empty)
 
     when(Running) {
+        case Event(Init, Empty) =>
+            log.info("Starting new Kademlia net")
+            stay
         case request: Event =>
             routingActor forward request
             stay
@@ -76,21 +79,28 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
 
     when(PingExisting) {
         case Event(Init, Empty) =>
+            log.info("Connecting to existing Kademlia net")
             context.system.actorSelection(existingNode.toAkka(context.system.name, nodeName)).resolveOne().onComplete {
-                case Success(ref) => context.self ! ref
+                case Success(ref) =>
+                    log.info(s"Bootstrapping actor found: $ref")
+                    context.self ! ref
                 case Failure(error) => throw new RuntimeException(error)
             }
             stay
         case Event(actorRef: ActorRef, Empty) =>
+            log.info("Sending ping request")
             actorRef ! PingRequest(selfNode)
+            log.info("Ping request sent, entering joining state")
             goto(Joining)
     }
 
     when(Joining) {
         case Event(PongReply, Empty) =>
+            log.info("Got pong reply, sending find node request")
             routingActor ! FindNode(selfNode, selfNode.nodeId)
             stay
         case Event(reply: FindNodeReply, Empty) =>
+            log.info("Got find node reply, going into running")
             goto(Running)
     }
 

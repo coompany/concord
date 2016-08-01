@@ -17,6 +17,7 @@ class RoutingActor(selfNode: ActorNode)(implicit val config: ConcordConfig) exte
 
     override def receive = {
         case PingRequest(senderNode) =>
+            log.info("Got ping request, sending pong reply")
             kBucketActor ! Add(ActorNode(sender, senderNode.nodeId))
             sender ! PongReply(selfNode)
         case request: FindNode =>
