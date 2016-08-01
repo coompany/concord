@@ -5,8 +5,8 @@ import akka.util.Timeout
 import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.KademliaActor._
-import concord.kademlia.routing.RoutingActor
 import concord.kademlia.routing.RoutingMessages.{FindClosest, PingRequest, PongReply}
+import concord.kademlia.routing.{ActorNode, RoutingActor}
 import concord.kademlia.store.{InMemoryStore, StoreActor}
 import concord.util.Host
 
@@ -37,9 +37,11 @@ object KademliaActor {
 }
 
 class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends FSM[State, Data] {
-    self: RoutingActor.Provider =>
+    this: RoutingActor.Provider =>
 
-    protected val routingActor = context.system.actorOf(Props(newRoutingActor(nodeId)))
+    protected val selfNode = ActorNode(self, nodeId)
+
+    protected val routingActor = context.system.actorOf(Props(newRoutingActor(selfNode)))
     protected val storeActor = context.system.actorOf(Props(new StoreActor[V] with InMemoryStore[V]))
 
     startWith(Running, Empty)
@@ -66,7 +68,7 @@ object JoiningKadActor {
 }
 
 class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: ConcordConfig) extends KademliaActor[V](nodeId) {
-    self: RoutingActor.Provider =>
+    this: RoutingActor.Provider =>
 
     import JoiningKadActor._
 
@@ -80,13 +82,13 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
             }
             stay
         case Event(actorRef: ActorRef, Empty) =>
-            actorRef ! PingRequest(nodeId)
+            actorRef ! PingRequest(selfNode)
             goto(Joining)
     }
 
     when(Joining) {
         case Event(PongReply, Empty) =>
-            routingActor ! FindClosest(nodeId)
+            routingActor ! FindClosest(selfNode)
             stay
     }
 

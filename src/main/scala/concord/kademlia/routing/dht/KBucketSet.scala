@@ -1,19 +1,19 @@
 package concord.kademlia.routing.dht
 
 import concord.identity.NodeId
-import concord.kademlia.routing.Node
+import concord.kademlia.routing.{ActorNode, Node}
 
 import scala.collection.immutable
 
 
-class KBucketSet[T <: Node](nodeId: NodeId) {
+class KBucketSet[T <: Node](selfNode: ActorNode) {
     self: KBucket.Provider =>
 
-    private val kBucketArray: Array[KBucket[T]] = Array.fill(nodeId.size)(newKBucket[T])
+    private val kBucketArray: Array[KBucket[T]] = Array.fill(selfNode.nodeId.size)(newKBucket[T])
 
     def findClosestK(toId: NodeId, K: Int = kBucketArray(0).capacity) = {
-        val indexes = nodeId.findNonMatchingFromRight(toId).toStream
-        val diff = Stream.range(0, nodeId.size, 1).diff(indexes)
+        val indexes = selfNode.nodeId.findNonMatchingFromRight(toId).toStream
+        val diff = Stream.range(0, selfNode.nodeId.size, 1).diff(indexes)
         val traversalOrder = indexes ++ diff
 
         traversalOrder.foldLeft(immutable.List.empty[T]) { (nodes, index) =>
@@ -39,15 +39,15 @@ class KBucketSet[T <: Node](nodeId: NodeId) {
 
     def remove(node: T): Boolean = getKBucket(node).remove(node)
 
-    private def getKBucket(node: T) = kBucketArray(node.nodeId.size - nodeId.longestPrefixLength(node.nodeId) - 1)
+    private def getKBucket(node: T) = kBucketArray(node.nodeId.size - selfNode.nodeId.longestPrefixLength(node.nodeId) - 1)
 
 }
 
 object KBucketSet {
 
     trait Provider {
-        def newKBucketSet[T <: Node](nodeId: NodeId, kBucketCapacity: Int) =
-            new KBucketSet[T](nodeId) with KBucket.Provider { val capacity = kBucketCapacity }
+        def newKBucketSet[T <: Node](selfNode: ActorNode, kBucketCapacity: Int) =
+            new KBucketSet[T](selfNode) with KBucket.Provider { val capacity = kBucketCapacity }
     }
 
 }
