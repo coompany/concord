@@ -38,7 +38,7 @@ case class NodeId(id: BigInt, size: Int) {
         _longestPrefixLength(dist.size)
     }
 
-    private def foldRight[T](acc: T, start: Int = 0)(op: (Int, T) => T): T = {
+    private def foldRight[T](acc: T, start: Int = 1)(op: (Int, T) => T): T = {
         @tailrec def _foldRight(bit: Int, acc: T): T = if (bit == size) acc else _foldRight(bit + 1, op(bit, acc))
         _foldRight(start, acc)
     }

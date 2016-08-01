@@ -1,12 +1,13 @@
 package concord.kademlia.routing.dht
 
 import concord.kademlia.routing.{LastSeenOrdering, Node, TimestampNode}
+import concord.util.Logging
 import concord.util.time.Clock
 
 import scala.collection.immutable
 
 
-class KBucket[T <: Node](val capacity: Int)(implicit val nodeOrdering: Ordering[TimestampNode]) {
+class KBucket[T <: Node](capacity: Int)(implicit val nodeOrdering: Ordering[TimestampNode]) extends Logging {
     self: Clock =>
 
     private var nodes = immutable.TreeSet.empty[TimestampNode]
@@ -42,8 +43,7 @@ class KBucket[T <: Node](val capacity: Int)(implicit val nodeOrdering: Ordering[
 object KBucket {
 
     trait Provider {
-        def capacity: Int
-        def newKBucket[T <: Node] = new KBucket[T](capacity)(LastSeenOrdering()) with Clock
+        def newKBucket[T <: Node](capacity: Int) = new KBucket[T](capacity)(LastSeenOrdering()) with Clock
     }
 
 }

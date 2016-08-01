@@ -5,13 +5,13 @@ import concord.identity.NodeId
 import concord.kademlia.KademliaActor.Init
 import concord.kademlia.routing.RemoteNode
 import concord.kademlia.{JoiningKadActor, KademliaActor}
-import org.slf4j.LoggerFactory
+import concord.util.Logging
 
 
-class Concord(config: ConcordConfig) {
+class Concord(config: ConcordConfig) extends Logging {
     self: JoiningKadActor.Provider =>
 
-    val log = LoggerFactory.getLogger(getClass)
+    log.info(s"Starting Concord with following info:\n$config\n\n")
 
     private val actorSystem = ActorSystem()
 

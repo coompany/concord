@@ -21,6 +21,7 @@ class LookupActor(selfNode: ActorNode, kBucketActor: ActorRef, kBucketSize: Int,
     when(Initial) {
         // when requested to find a node asks to bucket first
         case Event(request: FindNode, _) =>
+            log.info("Got find node request in lookup FSM")
             kBucketActor ! FindKClosest(request.searchId)
             goto(WaitForLocalNodes) using Lookup(request.sender.nodeId, sender)
     }
@@ -28,9 +29,9 @@ class LookupActor(selfNode: ActorNode, kBucketActor: ActorRef, kBucketSize: Int,
     when(WaitForLocalNodes) {
         // when receives response from bucket query remote nodes
         case Event(reply: FindKClosestReply[ActorNode], request: Lookup) =>
+            log.info("Got K closest reply")
             val nodes = selfNode :: reply.nodes
-            val qn = QueryNodeData(
-                request,
+            val qn = QueryNodeData(request,
                 TreeMap(nodes.map(node => node.nodeId -> NodeQuery(node.ref)): _*)(new request.nodeId.SelfOrder))
             goto(QueryNode) using takeAlphaAndUpdate(qn, alpha)
     }
@@ -38,6 +39,7 @@ class LookupActor(selfNode: ActorNode, kBucketActor: ActorRef, kBucketSize: Int,
     when(QueryNode) (remoteReply orElse {
         // start sending requests to nodes to query
         case Event(StartRound, qn: QueryNodeData) =>
+            log.info(s"Sending requests for round ${qn.round}")
             sendRequests(qn.toQuery.values, qn.request.nodeId)
             stay using qn.copy(querying = qn.querying ++ qn.toQuery, toQuery = Map())
         // done querying nodes

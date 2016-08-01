@@ -50,7 +50,8 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
         case Event(Init, Empty) =>
             log.info("Starting new Kademlia net")
             stay
-        case request: Event =>
+        case Event(request, _) =>
+            log.info("Got request, forwarding to routing actor")
             routingActor forward request
             stay
     }
@@ -95,7 +96,7 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
     }
 
     when(Joining) {
-        case Event(PongReply, Empty) =>
+        case Event(pong: PongReply, Empty) =>
             log.info("Got pong reply, sending find node request")
             routingActor ! FindNode(selfNode, selfNode.nodeId)
             stay

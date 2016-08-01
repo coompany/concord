@@ -3,14 +3,15 @@ package concord.kademlia.routing.dht
 import akka.actor.Actor
 import concord.ConcordConfig
 import concord.kademlia.routing.ActorNode
-import concord.util.Logging
+import concord.util.LoggingActor
 
 
-class KBucketActor(selfNode: ActorNode)(implicit config: ConcordConfig) extends Actor with Logging {
+class KBucketActor(selfNode: ActorNode)(implicit config: ConcordConfig) extends Actor with LoggingActor {
     self: KBucketSet.Provider =>
 
     import KBucketMessages._
 
+    log.info(s"Creating kbuckets of capacity ${config.bucketsCapacity}")
     private val kBuckets = newKBucketSet[ActorNode](selfNode, config.bucketsCapacity)
 
     override def receive: Receive = {
