@@ -25,7 +25,7 @@ object ConcordConfig {
     def fromFile: ConcordConfig = ConcordConfig(
         config.getString("concord.identity.nodeId"),
         config.getString("concord.routing.name"),
-        Host(config.getString("akka.remote.netty.udp.hostname"), config.getInt("akka.remote.netty.udp.port")),
+        Host(config.getString("concord.hostname"), config.getInt("concord.port")),
         config.getInt("concord.routing.bucketsCapacity"),
         bootstrapHost,
         config.getInt("concord.routing.alpha")

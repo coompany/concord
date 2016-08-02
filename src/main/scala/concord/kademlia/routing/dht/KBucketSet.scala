@@ -23,7 +23,6 @@ class KBucketSet[T <: Node](selfNode: ActorNode, capacity: Int) extends Logging 
     }
 
     def add(node: T): Boolean = {
-        log.info(s"Adding $node to k-buckets")
         if (isFull(node)) {
             throw new IllegalStateException("KBucket is full!")
         } else {

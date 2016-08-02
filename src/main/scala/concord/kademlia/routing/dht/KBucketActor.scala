@@ -16,7 +16,7 @@ class KBucketActor(selfNode: ActorNode)(implicit config: ConcordConfig) extends 
 
     override def receive: Receive = {
         case FindKClosest(searchNode) =>
-            sender ! FindKClosestReply(selfNode.nodeId, kBuckets.findClosestK(searchNode))
+            sender ! FindKClosestReply(selfNode, searchNode, kBuckets.findClosestK(searchNode))
         case Add(node: ActorNode) =>
             kBuckets.add(node)
     }

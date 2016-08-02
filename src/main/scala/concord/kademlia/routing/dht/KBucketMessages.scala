@@ -7,7 +7,7 @@ import concord.kademlia.routing.Node
 object KBucketMessages {
 
     case class FindKClosest(searchId: NodeId)
-    case class FindKClosestReply[T <: Node](searchId: NodeId, nodes: List[T])
+    case class FindKClosestReply[T <: Node](sender: T, searchId: NodeId, nodes: List[T])
 
     case class Add[T <: Node](node: T)
 

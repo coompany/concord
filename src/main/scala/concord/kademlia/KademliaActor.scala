@@ -5,12 +5,11 @@ import akka.util.Timeout
 import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.KademliaActor._
-import concord.kademlia.routing.RoutingMessages.{FindNode, FindNodeReply, PingRequest, PongReply}
+import concord.kademlia.routing.RoutingMessages._
 import concord.kademlia.routing.{ActorNode, RoutingActor}
 import concord.kademlia.store.{InMemoryStore, StoreActor}
 import concord.util.Host
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -46,14 +45,17 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
 
     startWith(Running, Empty)
 
-    when(Running) {
+    when(Running) (init orElse remoteReply andThen(x => stay()))
+
+    private def init: PartialFunction[Event, Unit] = {
         case Event(Init, Empty) =>
             log.info("Starting new Kademlia net")
-            stay
-        case Event(request, _) =>
+    }
+
+    protected def remoteReply: PartialFunction[Event, Unit] = {
+        case Event(request: NodeRequest, _) =>
             log.info("Got request, forwarding to routing actor")
             routingActor forward request
-            stay
     }
 
 }
@@ -80,8 +82,10 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
 
     when(PingExisting) {
         case Event(Init, Empty) =>
-            log.info("Connecting to existing Kademlia net")
-            context.system.actorSelection(existingNode.toAkka(context.system.name, nodeName)).resolveOne().onComplete {
+            val actorPath = existingNode.toAkka(context.system.name, nodeName)
+            log.info(s"Connecting to existing Kademlia net via $actorPath")
+            import context.dispatcher
+            context.actorSelection(actorPath).resolveOne().onComplete {
                 case Success(ref) =>
                     log.info(s"Bootstrapping actor found: $ref")
                     context.self ! ref
@@ -90,19 +94,20 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
             stay
         case Event(actorRef: ActorRef, Empty) =>
             log.info("Sending ping request")
-            actorRef ! PingRequest(selfNode)
+            self ! NodeRequest(actorRef, PingRequest(selfNode))
             log.info("Ping request sent, entering joining state")
             goto(Joining)
     }
 
-    when(Joining) {
+    when(Joining) (remoteReply andThen(x => stay) orElse {
         case Event(pong: PongReply, Empty) =>
             log.info("Got pong reply, sending find node request")
-            routingActor ! FindNode(selfNode, selfNode.nodeId)
+            routingActor ! AddToBuckets(pong.sender)
+            routingActor ! NodeRequest(self, FindNode(selfNode, selfNode.nodeId, local = false))
             stay
         case Event(reply: FindNodeReply, Empty) =>
             log.info("Got find node reply, going into running")
             goto(Running)
-    }
+    })
 
 }

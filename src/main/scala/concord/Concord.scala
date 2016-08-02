@@ -9,11 +9,9 @@ import concord.util.Logging
 
 
 class Concord(config: ConcordConfig) extends Logging {
-    self: JoiningKadActor.Provider =>
+    self: JoiningKadActor.Provider with WatchActor.Provider =>
 
-    log.info(s"Starting Concord with following info:\n$config\n\n")
-
-    private val actorSystem = ActorSystem()
+    private val actorSystem = ActorSystem(config.systemName)
 
     val nodeId = config.nodeId match {
         case s if s.isEmpty => NodeId(config.host)
@@ -27,6 +25,10 @@ class Concord(config: ConcordConfig) extends Logging {
         case _ => actorSystem.actorOf(Props(newKademliaActor[Int](nodeId)(config)), KademliaActor.nodeName)
     }
 
+    actorSystem.actorOf(Props(newWatchActor(kadNode)))
+
+    log.info(s"\n\nStarting Concord with following info:\n\n$config\n\n$nodeId\n\n")
+
     kadNode ! Init
 
 }
@@ -34,6 +36,7 @@ class Concord(config: ConcordConfig) extends Logging {
 
 object Concord {
 
-    def apply(config: ConcordConfig = ConcordConfig.fromFile): Concord = new Concord(config) with JoiningKadActor.Provider
+    def apply(config: ConcordConfig = ConcordConfig.fromFile): Concord =
+        new Concord(config) with JoiningKadActor.Provider with WatchActor.Provider
 
 }
