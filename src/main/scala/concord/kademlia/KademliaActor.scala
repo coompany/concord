@@ -1,13 +1,12 @@
 package concord.kademlia
 
-import akka.actor.{ActorRef, FSM, Props}
+import akka.actor.{Actor, ActorRef, FSM, Props}
 import akka.util.Timeout
 import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.KademliaActor._
 import concord.kademlia.routing.RoutingMessages._
 import concord.kademlia.routing.{ActorNode, RoutingActor}
-import concord.kademlia.store.{InMemoryStore, StoreActor}
 import concord.util.Host
 
 import scala.concurrent.duration._
@@ -25,13 +24,13 @@ object KademliaActor {
     case object Empty extends Data
 
     trait Provider {
-        def newKademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig): KademliaActor[V] =
-            new KademliaActor[V](nodeId) with RoutingActor.Provider
+        def newKademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) =
+            Props(new KademliaActor[V](nodeId) with RoutingActor.Provider)
     }
 
     val nodeName = "concordKademlia"
 
-    implicit val timeout: Timeout = FiniteDuration(30, SECONDS)
+    implicit val timeout: Timeout = 5 seconds
 
 }
 
@@ -40,8 +39,7 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
 
     protected val selfNode = ActorNode(self, nodeId)
 
-    protected val routingActor = context.system.actorOf(Props(newRoutingActor(selfNode)))
-    protected val storeActor = context.system.actorOf(Props(new StoreActor[V] with InMemoryStore[V]))
+    protected val routingActor = context.actorOf(newRoutingActor(selfNode), "routingActor")
 
     startWith(Running, Empty)
 
@@ -58,6 +56,8 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
             routingActor forward request
     }
 
+    initialize()
+
 }
 
 
@@ -68,7 +68,7 @@ object JoiningKadActor {
 
     trait Provider extends KademliaActor.Provider {
         def newJoiningKademliaActor[V](nodeId: NodeId, existingNode: Host)(implicit config: ConcordConfig) =
-            new JoiningKadActor[V](nodeId, existingNode) with RoutingActor.Provider
+            Props(new JoiningKadActor[V](nodeId, existingNode) with RoutingActor.Provider)
     }
 
 }

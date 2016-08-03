@@ -13,7 +13,7 @@ class RoutingActor(selfNode: ActorNode)(implicit val config: ConcordConfig) exte
 
     import RoutingMessages._
 
-    private val kBucketActor = context.system.actorOf(Props(newKBucketActor(selfNode)))
+    private val kBucketActor = context.actorOf(newKBucketActor(selfNode), "kBucketActor")
 
     override def receive = {
         case req @ NodeRequest(recipient, PingRequest(senderNode)) if recipient != selfNode.ref =>
@@ -25,7 +25,8 @@ class RoutingActor(selfNode: ActorNode)(implicit val config: ConcordConfig) exte
         case req @ NodeRequest(_, request: FindNode) if !request.local =>
             log.info(s"Got lookup find node request against ${request.searchId}")
             addToBuckets(req)
-            context.system.actorOf(Props(newLookupActor(selfNode, kBucketActor, config.bucketsCapacity, config.alpha))) forward request
+            val lookupActor = context.actorOf(newLookupActor(selfNode, kBucketActor, config.bucketsCapacity, config.alpha), "lookupActor")
+            lookupActor forward request
         case req @ NodeRequest(_, FindNode(senderNode, searchId, _)) =>
             log.info(s"Got local find node request for $searchId")
             addToBuckets(req)
@@ -46,7 +47,7 @@ object RoutingActor {
 
     trait Provider {
         def newRoutingActor(selfNode: ActorNode)(implicit config: ConcordConfig) =
-            new RoutingActor(selfNode) with KBucketActor.Provider with LookupActor.Provider
+            Props(new RoutingActor(selfNode) with KBucketActor.Provider with LookupActor.Provider)
     }
 
 }

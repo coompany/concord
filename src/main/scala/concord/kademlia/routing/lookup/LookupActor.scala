@@ -1,6 +1,6 @@
 package concord.kademlia.routing.lookup
 
-import akka.actor.{ActorRef, FSM}
+import akka.actor.{ActorRef, FSM, Props}
 import concord.identity.NodeId
 import concord.kademlia.routing.ActorNode
 import concord.kademlia.routing.RoutingMessages.{FindNode, FindNodeReply, NodeRequest}
@@ -152,7 +152,7 @@ object LookupActor {
 
     trait Provider {
         def newLookupActor(selfNode: ActorNode, kBucketActor: ActorRef, kBucketSize: Int, alpha: Int) =
-            new LookupActor(selfNode, kBucketActor, kBucketSize, alpha)
+            Props(new LookupActor(selfNode, kBucketActor, kBucketSize, alpha))
     }
 
 }
