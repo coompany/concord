@@ -1,12 +1,11 @@
 package concord.kademlia.routing.dht
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 import concord.ConcordConfig
-import concord.kademlia.routing.ActorNode
-import concord.util.LoggingActor
+import concord.kademlia.routing.{ActorNode, RemoteNode}
 
 
-class KBucketActor(selfNode: ActorNode)(implicit config: ConcordConfig) extends Actor with LoggingActor {
+class KBucketActor(selfNode: RemoteNode)(implicit config: ConcordConfig) extends Actor with ActorLogging {
     self: KBucketSet.Provider =>
 
     import KBucketMessages._
@@ -26,7 +25,7 @@ class KBucketActor(selfNode: ActorNode)(implicit config: ConcordConfig) extends 
 object KBucketActor {
 
     trait Provider {
-        def newKBucketActor(selfNode: ActorNode)(implicit config: ConcordConfig) =
+        def newKBucketActor(selfNode: RemoteNode)(implicit config: ConcordConfig) =
             Props(new KBucketActor(selfNode) with KBucketSet.Provider)
     }
 

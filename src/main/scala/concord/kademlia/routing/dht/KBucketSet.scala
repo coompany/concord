@@ -1,13 +1,13 @@
 package concord.kademlia.routing.dht
 
 import concord.identity.NodeId
-import concord.kademlia.routing.{ActorNode, Node}
+import concord.kademlia.routing.{ActorNode, Node, RemoteNode}
 import concord.util.Logging
 
 import scala.collection.immutable
 
 
-class KBucketSet[T <: Node](selfNode: ActorNode, capacity: Int) extends Logging {
+class KBucketSet[T <: Node](selfNode: RemoteNode, capacity: Int) extends Logging {
     self: KBucket.Provider =>
 
     private val kBucketArray: Array[KBucket[T]] = Array.fill(selfNode.nodeId.size)(newKBucket[T](capacity))
@@ -47,7 +47,7 @@ class KBucketSet[T <: Node](selfNode: ActorNode, capacity: Int) extends Logging 
 object KBucketSet {
 
     trait Provider {
-        def newKBucketSet[T <: Node](selfNode: ActorNode, kBucketCapacity: Int) =
+        def newKBucketSet[T <: Node](selfNode: RemoteNode, kBucketCapacity: Int) =
             new KBucketSet[T](selfNode, kBucketCapacity) with KBucket.Provider
     }
 

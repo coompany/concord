@@ -1,12 +1,11 @@
 package concord.kademlia.store
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorLogging}
 import concord.identity.NodeId
 import concord.kademlia.store.StoreActor.{Get, Set}
-import concord.util.LoggingActor
 
 
-private[kademlia] class StoreActor[V] extends Actor with LoggingActor {
+private[kademlia] class StoreActor[V] extends Actor with ActorLogging {
     this: Store[V] =>
 
     override def receive = {

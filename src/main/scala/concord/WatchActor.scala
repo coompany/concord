@@ -1,10 +1,9 @@
 package concord
 
-import akka.actor.{Actor, ActorRef, Props, Terminated}
-import concord.util.LoggingActor
+import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 
 
-class WatchActor(actors: Seq[ActorRef]) extends Actor with LoggingActor {
+class WatchActor(actors: Seq[ActorRef]) extends Actor with ActorLogging {
 
     actors foreach context.watch
 

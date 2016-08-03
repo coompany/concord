@@ -1,16 +1,18 @@
 package concord.kademlia
 
-import akka.actor.{Actor, ActorRef, FSM, Props}
+import akka.actor.{FSM, Props}
 import akka.util.Timeout
 import concord.ConcordConfig
 import concord.identity.NodeId
 import concord.kademlia.KademliaActor._
 import concord.kademlia.routing.RoutingMessages._
-import concord.kademlia.routing.{ActorNode, RoutingActor}
+import concord.kademlia.routing.{RemoteNode, RoutingActor}
+import concord.kademlia.udp.ListenerActor.ListenerMessage
+import concord.kademlia.udp.SenderActor.{SenderMessage, SenderReady}
+import concord.kademlia.udp.{ListenerActor, SenderActor}
 import concord.util.Host
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
 
 
 object KademliaActor {
@@ -18,6 +20,7 @@ object KademliaActor {
     case object Init
 
     trait State
+    case object WaitSender extends State
     case object Running extends State
 
     trait Data
@@ -25,7 +28,7 @@ object KademliaActor {
 
     trait Provider {
         def newKademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) =
-            Props(new KademliaActor[V](nodeId) with RoutingActor.Provider)
+            Props(new KademliaActor[V](nodeId) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
     }
 
     val nodeName = "concordKademlia"
@@ -35,13 +38,28 @@ object KademliaActor {
 }
 
 class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends FSM[State, Data] {
-    this: RoutingActor.Provider =>
+    this: SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider =>
 
-    protected val selfNode = ActorNode(self, nodeId)
+    protected val selfNode = RemoteNode(config.host, nodeId)
 
-    protected val routingActor = context.actorOf(newRoutingActor(selfNode), "routingActor")
+    protected val listenerActor = context.actorOf(newListenerActor(config.host, context.self), "listenerActor")
+    protected val senderActor = context.actorOf(newSenderActor(context.self), "senderActor")
+    protected val routingActor = context.actorOf(newRoutingActor(selfNode, senderActor), "routingActor")
 
-    startWith(Running, Empty)
+    protected def afterSenderState: State = goto(Running)
+
+    protected def initMessage() = self ! Init
+
+    startWith(WaitSender, Empty)
+
+    when(WaitSender) (waitForSender)
+
+    protected def waitForSender: StateFunction = {
+        case Event(SenderReady, _) =>
+            log.info("Sender actor is ready")
+            initMessage()
+            afterSenderState
+    }
 
     when(Running) (init orElse remoteReply andThen(x => stay()))
 
@@ -51,12 +69,13 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
     }
 
     protected def remoteReply: PartialFunction[Event, Unit] = {
-        case Event(request: NodeRequest, _) =>
-            log.info("Got request, forwarding to routing actor")
-            routingActor forward request
+        case Event(message: Message, _) =>
+            log.info(s"Got request $message, forwarding to routing actor")
+            routingActor forward message
+        case Event(request: ListenerMessage, _) =>
+            log.info(s"Got listener message, forwarding ${request.message}")
+            self forward request.message
     }
-
-    initialize()
 
 }
 
@@ -68,46 +87,39 @@ object JoiningKadActor {
 
     trait Provider extends KademliaActor.Provider {
         def newJoiningKademliaActor[V](nodeId: NodeId, existingNode: Host)(implicit config: ConcordConfig) =
-            Props(new JoiningKadActor[V](nodeId, existingNode) with RoutingActor.Provider)
+            Props(new JoiningKadActor[V](nodeId, existingNode) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
     }
 
 }
 
 class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: ConcordConfig) extends KademliaActor[V](nodeId) {
-    this: RoutingActor.Provider =>
+    this: SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider =>
 
     import JoiningKadActor._
 
-    startWith(PingExisting, Empty)
+    override protected def afterSenderState: State = goto(PingExisting)
 
     when(PingExisting) {
         case Event(Init, Empty) =>
-            val actorPath = existingNode.toAkka(context.system.name, nodeName)
-            log.info(s"Connecting to existing Kademlia net via $actorPath")
-            import context.dispatcher
-            context.actorSelection(actorPath).resolveOne().onComplete {
-                case Success(ref) =>
-                    log.info(s"Bootstrapping actor found: $ref")
-                    context.self ! ref
-                case Failure(error) => throw new RuntimeException(error)
-            }
+            log.info(s"Connecting to existing Kademlia net via $existingNode")
+            self ! existingNode
             stay
-        case Event(actorRef: ActorRef, Empty) =>
+        case Event(remoteHost: Host, Empty) =>
             log.info("Sending ping request")
-            self ! NodeRequest(actorRef, PingRequest(selfNode))
-            log.info("Ping request sent, entering joining state")
+            senderActor ! SenderMessage(remoteHost, PingRequest(selfNode))
             goto(Joining)
     }
 
-    when(Joining) (remoteReply andThen(x => stay) orElse {
+    when(Joining) (joiningSF orElse remoteReply andThen(x => stay))
+
+    private def joiningSF: StateFunction = {
         case Event(pong: PongReply, Empty) =>
             log.info("Got pong reply, sending find node request")
             routingActor ! AddToBuckets(pong.sender)
-            routingActor ! NodeRequest(self, FindNode(selfNode, selfNode.nodeId, local = false))
+            routingActor ! FindNode(selfNode, selfNode.nodeId, local = false)
             stay
         case Event(reply: FindNodeReply, Empty) =>
             log.info("Got find node reply, going into running")
             goto(Running)
-    })
-
+    }
 }

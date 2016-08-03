@@ -26,8 +26,6 @@ class Concord(config: ConcordConfig) extends Logging {
 
     log.info(s"\n\nStarting Concord with following info:\n\n$config\n\n$nodeId\n\n")
 
-    kadNode.tell(Init, Actor.noSender)
-
 }
 
 
