@@ -4,16 +4,16 @@ import java.net.InetSocketAddress
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Udp}
-import concord.util.Host
 import concord.kademlia.routing.RoutingMessages._
 import concord.kademlia.udp.ListenerActor.ListenerMessage
+import concord.util.Host
 import play.api.libs.json._
 
 
-class ListenerActor(host: Host, parentActor: ActorRef) extends Actor with ActorLogging {
+class ListenerActor(selfNode: Node, parentActor: ActorRef) extends Actor with ActorLogging {
 
     import context.system
-    IO(Udp) ! Udp.Bind(self, host.toSocketAddress)
+    IO(Udp) ! Udp.Bind(self, selfNode.host.toSocketAddress)
 
     override def receive = {
         case Udp.Bound(local) =>
@@ -24,9 +24,15 @@ class ListenerActor(host: Host, parentActor: ActorRef) extends Actor with ActorL
         case Udp.Received(data, remote) =>
             implicit val json = Json.parse(data.toArray)
             implicit val r = remote
-            handleRpcType
+            handleRemoteDestination
         case Udp.Unbind  => socket ! Udp.Unbind
         case Udp.Unbound => context.stop(self)
+    }
+
+    private def handleRemoteDestination(implicit json: JsValue, remote: InetSocketAddress) = (json \ recipientJsonKey).as[Node] match {
+        case remoteNode: Node if remoteNode.nodeId == selfNode.nodeId => handleRpcType
+        case remoteNode: Node => log.info(s"Got request addressed to wrong nodeId $remoteNode")
+        case _ => log.warning(s"Recipient not found in message!\n$json")
     }
 
     private def handleRpcType(implicit json: JsValue, remote: InetSocketAddress) = (json \ rpcJsonKey).as[String] match {
@@ -39,11 +45,12 @@ class ListenerActor(host: Host, parentActor: ActorRef) extends Actor with ActorL
         case "find_node" =>
             log.info(s"Got find node from $remote: $json")
             handleJsonParsing(json.validate[FindNode])
+        case "find_node_reply" =>
+            log.info(s"Got find node reply from $remote: $json")
+            handleJsonParsing(json.validate[FindNodeReply])
     }
 
     private def handleJsonParsing[T <: Message](result: JsResult[T])(implicit json: JsValue, remote: InetSocketAddress) = result match {
-//        case JsSuccess(request: Request, _) =>
-//            parentActor ! NodeRequest(request.sender.host, request)
         case JsSuccess(request, _) =>
             parentActor ! ListenerMessage(Host(remote.getHostName, remote.getPort), request)
         case JsError(errors) =>
@@ -57,7 +64,7 @@ class ListenerActor(host: Host, parentActor: ActorRef) extends Actor with ActorL
 object ListenerActor {
 
     trait Provider {
-        def newListenerActor(host: Host, parentActor: ActorRef) = Props(new ListenerActor(host, parentActor))
+        def newListenerActor(selfNode: Node, parentActor: ActorRef) = Props(new ListenerActor(selfNode, parentActor))
     }
 
     final case class ListenerMessage(remote: Host, message: Message)

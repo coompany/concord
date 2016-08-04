@@ -10,7 +10,6 @@ import concord.kademlia.routing.{RemoteNode, RoutingActor}
 import concord.kademlia.udp.ListenerActor.ListenerMessage
 import concord.kademlia.udp.SenderActor.{SenderMessage, SenderReady}
 import concord.kademlia.udp.{ListenerActor, SenderActor}
-import concord.util.Host
 
 import scala.concurrent.duration._
 
@@ -42,7 +41,7 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
 
     protected val selfNode = RemoteNode(config.host, nodeId)
 
-    protected val listenerActor = context.actorOf(newListenerActor(config.host, context.self), "listenerActor")
+    protected val listenerActor = context.actorOf(newListenerActor(selfNode, context.self), "listenerActor")
     protected val senderActor = context.actorOf(newSenderActor(context.self), "senderActor")
     protected val routingActor = context.actorOf(newRoutingActor(selfNode, senderActor), "routingActor")
 
@@ -86,13 +85,13 @@ object JoiningKadActor {
     case object Joining extends State
 
     trait Provider extends KademliaActor.Provider {
-        def newJoiningKademliaActor[V](nodeId: NodeId, existingNode: Host)(implicit config: ConcordConfig) =
+        def newJoiningKademliaActor[V](nodeId: NodeId, existingNode: Node)(implicit config: ConcordConfig) =
             Props(new JoiningKadActor[V](nodeId, existingNode) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
     }
 
 }
 
-class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: ConcordConfig) extends KademliaActor[V](nodeId) {
+class JoiningKadActor[V](nodeId: NodeId, existingNode: Node)(implicit config: ConcordConfig) extends KademliaActor[V](nodeId) {
     this: SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider =>
 
     import JoiningKadActor._
@@ -104,22 +103,19 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Host)(implicit config: Co
             log.info(s"Connecting to existing Kademlia net via $existingNode")
             self ! existingNode
             stay
-        case Event(remoteHost: Host, Empty) =>
+        case Event(remoteNode: Node, Empty) =>
             log.info("Sending ping request")
-            senderActor ! SenderMessage(remoteHost, PingRequest(selfNode))
+            senderActor ! SenderMessage(remoteNode, PingRequest(selfNode))
             goto(Joining)
     }
 
     when(Joining) (joiningSF orElse remoteReply andThen(x => stay))
 
     private def joiningSF: StateFunction = {
-        case Event(pong: PongReply, Empty) =>
-            log.info("Got pong reply, sending find node request")
+        case Event(pong: PongReply, _) =>
+            log.info("Got pong reply, sending self node lookup and go to running")
             routingActor ! AddToBuckets(pong.sender)
             routingActor ! FindNode(selfNode, selfNode.nodeId, local = false)
-            stay
-        case Event(reply: FindNodeReply, Empty) =>
-            log.info("Got find node reply, going into running")
             goto(Running)
     }
 }

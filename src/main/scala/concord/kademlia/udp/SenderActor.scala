@@ -5,8 +5,7 @@ import akka.io.{IO, Udp}
 import akka.util.ByteString
 import concord.kademlia.routing.RoutingMessages._
 import concord.kademlia.udp.SenderActor._
-import concord.util.Host
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json._
 
 
 class SenderActor(parentActor: ActorRef) extends Actor with ActorLogging {
@@ -26,11 +25,16 @@ class SenderActor(parentActor: ActorRef) extends Actor with ActorLogging {
             udpSender ! getSend(Json.toJson[PingRequest](message), remote)
         case SenderMessage(remote, message: PongReply) =>
             udpSender ! getSend(Json.toJson[PongReply](message), remote)
+        case SenderMessage(remote, message: FindNode) =>
+            udpSender ! getSend(Json.toJson[FindNode](message), remote)
+        case SenderMessage(remote, message: FindNodeReply) =>
+            udpSender ! getSend(Json.toJson[FindNodeReply](message), remote)
     }
 
-    private def getSend(message: JsValue, remote: Host): Udp.Send = {
-        log.info(s"Sending $message to $remote")
-        Udp.Send(ByteString(message.toString), remote.toSocketAddress)
+    private def getSend(message: JsValue, remote: Node): Udp.Send = {
+        val toSendMsg = message.as[JsObject] + (recipientJsonKey -> Json.toJson[Node](remote))
+        log.info(s"Sending $toSendMsg to $remote")
+        Udp.Send(ByteString(toSendMsg.toString), remote.host.toSocketAddress)
     }
 
 }
@@ -43,6 +47,6 @@ object SenderActor {
     }
 
     case object SenderReady
-    final case class SenderMessage[T <: Message](remote: Host, message: T)
+    final case class SenderMessage[T <: Message](remote: Node, message: T)
 
 }

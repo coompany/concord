@@ -2,8 +2,8 @@ package concord.kademlia.routing
 
 import concord.identity.NodeId
 import concord.util.Host
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 
 object RoutingMessages {
@@ -47,23 +47,25 @@ object RoutingMessages {
     case class PongReply(sender: Node) extends Reply
 
     val rpcJsonKey = "rpc"
+    val senderJsonKey = "sender"
+    val recipientJsonKey = "recipient"      // used in sender and listener actors
 
     // PingRequest writes / reads
     implicit val pingRequestWrites = new Writes[PingRequest] {
-        override def writes(o: PingRequest): JsValue = Json.obj(rpcJsonKey -> "ping", "sender" -> o.sender)
+        override def writes(o: PingRequest): JsValue = Json.obj(rpcJsonKey -> "ping", senderJsonKey -> o.sender)
     }
     implicit val pingRequestReads: Reads[PingRequest] = (
             (JsPath \ rpcJsonKey).read[String] and
-            (JsPath \ "sender").read[Node]
+            (JsPath \ senderJsonKey).read[Node]
         )((_, s) => PingRequest(s))
 
     // PongReply writes / reads
     implicit val pongReplyWrites = new Writes[PongReply] {
-        override def writes(o: PongReply): JsValue = Json.obj(rpcJsonKey -> "pong", "sender" -> o.sender)
+        override def writes(o: PongReply): JsValue = Json.obj(rpcJsonKey -> "pong", senderJsonKey -> o.sender)
     }
     implicit val pongReplyReads: Reads[PongReply] = (
             (JsPath \ rpcJsonKey).read[String] and
-            (JsPath \ "sender").read[Node]
+            (JsPath \ senderJsonKey).read[Node]
         )((_, s) => PongReply(s))
 
     case class FindNode(sender: Node, searchId: NodeId, local: Boolean) extends Request
@@ -74,14 +76,14 @@ object RoutingMessages {
         override def writes(o: FindNode): JsValue = Json.obj(
             rpcJsonKey -> "find_node",
             "searchId" -> o.searchId.toString,
-            "sender" -> o.sender,
+            senderJsonKey -> o.sender,
             "local" -> o.local
         )
     }
     implicit val findNodeReads: Reads[FindNode] = (
             (JsPath \ rpcJsonKey).read[String] and
             (JsPath \ "searchId").read[String].map(NodeId(_)) and
-            (JsPath \ "sender").read[Node] and
+            (JsPath \ senderJsonKey).read[Node] and
             (JsPath \ "local").read[Boolean]
         )((_, id, s, l) => FindNode(s, id, l))
 
@@ -91,17 +93,15 @@ object RoutingMessages {
             rpcJsonKey -> "find_node_reply",
             "searchId" -> o.searchId.toString,
             "nodes" -> o.nodes,
-            "sender" -> o.sender
+            senderJsonKey -> o.sender
         )
     }
     implicit val findNodeReplyReads: Reads[FindNodeReply] = (
             (JsPath \ rpcJsonKey).read[String] and
             (JsPath \ "searchId").read[String].map(NodeId(_)) and
             (JsPath \ "nodes").read[List[Node]] and
-            (JsPath \ "sender").read[Node]
+            (JsPath \ senderJsonKey).read[Node]
         )((_, id, n, s) => FindNodeReply(s, id, n))
-
-//    case class NodeRequest(node: Host, request: Request)
 
     case class AddToBuckets(sender: Node)
 

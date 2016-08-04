@@ -1,8 +1,7 @@
 package concord
 
-import akka.actor.{Actor, ActorSystem}
+import akka.actor.ActorSystem
 import concord.identity.NodeId
-import concord.kademlia.KademliaActor.Init
 import concord.kademlia.{JoiningKadActor, KademliaActor}
 import concord.util.Logging
 

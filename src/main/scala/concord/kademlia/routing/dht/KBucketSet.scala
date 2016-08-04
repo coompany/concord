@@ -1,7 +1,7 @@
 package concord.kademlia.routing.dht
 
 import concord.identity.NodeId
-import concord.kademlia.routing.{ActorNode, Node, RemoteNode}
+import concord.kademlia.routing.{Node, RemoteNode}
 import concord.util.Logging
 
 import scala.collection.immutable

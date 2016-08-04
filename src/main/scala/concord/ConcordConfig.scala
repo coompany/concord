@@ -1,6 +1,9 @@
 package concord
 
 import com.typesafe.config.ConfigFactory
+import concord.identity.NodeId
+import concord.kademlia.routing.RemoteNode
+import concord.kademlia.routing.RoutingMessages.Node
 import concord.util.Host
 
 
@@ -8,8 +11,9 @@ case class ConcordConfig(nodeId: String,
                          systemName: String,
                          host: Host,
                          bucketsCapacity: Int,
-                         existingNode: Option[Host],
-                         alpha: Int)
+                         existingNode: Option[Node],
+                         alpha: Int,
+                         maxRounds: Int)
 
 object ConcordConfig {
 
@@ -18,7 +22,11 @@ object ConcordConfig {
     val joining = config.getBoolean("concord.bootstrap.joining")
 
     val bootstrapHost = joining match {
-        case true => Some(Host(config.getString("concord.bootstrap.hostname"), config.getInt("concord.bootstrap.port")))
+        case true => Some(
+            RemoteNode(
+                Host(config.getString("concord.bootstrap.hostname"), config.getInt("concord.bootstrap.port")),
+                NodeId(config.getString("concord.bootstrap.nodeId"))
+            ))
         case false => None
     }
 
@@ -28,7 +36,8 @@ object ConcordConfig {
         Host(config.getString("concord.hostname"), config.getInt("concord.port")),
         config.getInt("concord.routing.bucketsCapacity"),
         bootstrapHost,
-        config.getInt("concord.routing.alpha")
+        config.getInt("concord.routing.alpha"),
+        config.getInt("concord.routing.maxRounds")
     )
 
 }

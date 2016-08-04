@@ -3,7 +3,7 @@ package concord.kademlia.routing.lookup
 import akka.actor.{ActorRef, FSM, Props}
 import concord.identity.NodeId
 import concord.kademlia.routing.RemoteNode
-import concord.kademlia.routing.RoutingMessages.{FindNode, FindNodeReply}
+import concord.kademlia.routing.RoutingMessages.FindNode
 import concord.kademlia.routing.dht.KBucketMessages.{FindKClosest, FindKClosestReply}
 import concord.kademlia.routing.lookup.LookupActor.{Data, State}
 import concord.kademlia.udp.SenderActor.SenderMessage
@@ -14,7 +14,14 @@ import scala.collection.immutable.TreeMap
 import scala.concurrent.duration._
 
 
-class LookupActor(selfNode: RemoteNode, senderActor: ActorRef, kBucketActor: ActorRef, kBucketSize: Int, alpha: Int) extends FSM[State, Data] {
+class LookupActor(selfNode: RemoteNode,
+                  parentActor: ActorRef,
+                  senderActor: ActorRef,
+                  kBucketActor: ActorRef,
+                  kBucketSize: Int,
+                  alpha: Int,
+                  maxRounds: Int)
+    extends FSM[State, Data] {
 
     import LookupActor._
 
@@ -31,15 +38,17 @@ class LookupActor(selfNode: RemoteNode, senderActor: ActorRef, kBucketActor: Act
     when(WaitForLocalNodes) {
         // when receives response from bucket query remote nodes
         case Event(reply: FindKClosestReply[RemoteNode], request: Lookup) =>
-            log.info("Got K closest reply")
+            log.info(s"Got K closest reply $reply")
             val nodes = selfNode :: reply.nodes
             val qn = QueryNodeData(request,
-                TreeMap(nodes.map(node => node.nodeId -> NodeQuery(node.host)): _*)(new request.nodeId.SelfOrder))
+                TreeMap(nodes.map(node => node.nodeId -> NodeQuery(node)): _*)(new request.nodeId.SelfOrder))
             goto(QueryNode) using takeAlphaAndUpdate(qn, alpha)
     }
 
     when(QueryNode) (remoteReply orElse {
         // start sending requests to nodes to query
+        case Event(StartRound, qn: QueryNodeData) if qn.round > maxRounds =>
+            goto(GatherNode) using qn
         case Event(StartRound, qn: QueryNodeData) =>
             log.info(s"Sending requests for round ${qn.round}")
             sendRequests(qn.toQuery.values, qn.request.nodeId)
@@ -71,7 +80,7 @@ class LookupActor(selfNode: RemoteNode, senderActor: ActorRef, kBucketActor: Act
 
                         kClosestExists match { // keep querying since not all of the previous request responded
                             case true => goto(QueryNode) using takeAlphaAndUpdate(qn, kBucketSize).copy(round = nextRound, lastRound = true)
-                            case false => goto(Finalize) using FinalizeData(qn.request, kClosest.toList.map(Function.tupled((id, node) => RemoteNode(node.host, id))))
+                            case false => goto(Finalize) using FinalizeData(qn.request, kClosest.toList.map(Function.tupled((id, node) => RemoteNode(node.node.host, id))))
                         }
                     case _ =>
                         goto(QueryNode) using takeAlphaAndUpdate(qn, kBucketSize).copy(round = nextRound, lastRound = true)
@@ -82,7 +91,7 @@ class LookupActor(selfNode: RemoteNode, senderActor: ActorRef, kBucketActor: Act
     when(Finalize) {
         case Event(StartRound, FinalizeData(request, kclosest)) =>
             log.info(s"Finalizing node lookup, sending reply back to sender")
-            senderActor ! SenderMessage(request.sender, FindNodeReply(selfNode, request.nodeId, kclosest))
+            parentActor ! LookupDone(request.nodeId)
             stop()
     }
 
@@ -114,13 +123,13 @@ class LookupActor(selfNode: RemoteNode, senderActor: ActorRef, kBucketActor: Act
     private def remoteReply: StateFunction = {
         // responds to remote find node requests
         case Event(reply: FindKClosestReply[RemoteNode], qn: QueryNodeData) =>
-            log.info(s"Got find node reply for ${reply.searchId}")
+            log.info(s"Got find node reply\n$reply\nwhile querying\n${qn.querying}")
             // newly seen nodes in the remote's reply (excluding already seen)
             val newSeen = reply.nodes
                 .filterNot(x => qn.seen.exists(_._1 == x.nodeId))
-                .map(n => n.nodeId -> NodeQuery(n.host, round = qn.round + 1))
+                .map(n => n.nodeId -> NodeQuery(n, round = qn.round + 1))
 
-            val updateQuery = qn.querying - reply.searchId
+            val updateQuery = qn.querying - reply.sender.nodeId
             val updateSeen = qn.seen ++ newSeen + (reply.sender.nodeId -> qn.querying(reply.sender.nodeId).copy(replied = true))
 
             stay using qn.copy(seen = updateSeen, querying = updateQuery)
@@ -146,15 +155,17 @@ object LookupActor {
                              querying: Map[NodeId, NodeQuery] = Map(),
                              round: Int = 1,
                              lastRound: Boolean = false) extends Data
-    case class NodeQuery(host: Host, round: Int = 1, replied: Boolean = false)
+    case class NodeQuery(node: RemoteNode, round: Int = 1, replied: Boolean = false)
     case class FinalizeData(request: Lookup, kClosest: List[RemoteNode]) extends Data
 
     case object StartRound
     case object EndRound
 
+    final case class LookupDone(searchId: NodeId)
+
     trait Provider {
-        def newLookupActor(selfNode: RemoteNode, senderActor: ActorRef, kBucketActor: ActorRef, kBucketSize: Int, alpha: Int) =
-            Props(new LookupActor(selfNode, senderActor, kBucketActor, kBucketSize, alpha))
+        def newLookupActor(selfNode: RemoteNode, parentActor: ActorRef, senderActor: ActorRef, kBucketActor: ActorRef, kBucketSize: Int, alpha: Int, maxRounds: Int) =
+            Props(new LookupActor(selfNode, parentActor, senderActor, kBucketActor, kBucketSize, alpha, maxRounds))
     }
 
 }
