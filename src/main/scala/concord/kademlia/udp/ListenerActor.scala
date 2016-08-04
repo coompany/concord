@@ -22,9 +22,7 @@ class ListenerActor(selfNode: Node, parentActor: ActorRef) extends Actor with Ac
 
     private def ready(socket: ActorRef): Receive = {
         case Udp.Received(data, remote) =>
-            implicit val json = Json.parse(data.toArray)
-            implicit val r = remote
-            handleRemoteDestination
+            handleRemoteDestination(Json.parse(data.toArray), remote)
         case Udp.Unbind  => socket ! Udp.Unbind
         case Udp.Unbound => context.stop(self)
     }
