@@ -7,6 +7,11 @@ import scala.annotation.tailrec
 
 case class NodeId(id: BigInt, size: Int) {
 
+    val byteArray = id.toByteArray match {
+        case x if x.length != size => x.takeRight(size / 8)
+        case x => x
+    }
+
     override def toString = str
 
     lazy val str = {
@@ -69,7 +74,8 @@ case object NodeId {
     }
 
     private def toUnsigned(bytes: Array[Byte]): BigInt = {
-        def _toUnsigned(index: Int = 0, decVal: BigInt = BigInt(0)): BigInt = if (index == bytes.length) decVal else _toUnsigned(index + 1, (decVal << 8) + (bytes(index) & 0xff))
+        def _toUnsigned(index: Int = 0, decVal: BigInt = BigInt(0)): BigInt =
+            if (index == bytes.length) decVal else _toUnsigned(index + 1, (decVal << 8) + (bytes(index) & 0xff))
         _toUnsigned()
     }
 
