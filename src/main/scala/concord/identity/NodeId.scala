@@ -1,11 +1,9 @@
 package concord.identity
 
-import concord.util.Host
-
 import scala.annotation.tailrec
 
 
-case class NodeId(id: BigInt, size: Int) {
+case class NodeId(id: BigInt, size: Int, xNonce: BigInt = BigInt(0)) {
 
     val byteArray = id.toByteArray match {
         case x if x.length != size => x.takeRight(size / 8)
@@ -62,15 +60,13 @@ case class NodeId(id: BigInt, size: Int) {
 
 case object NodeId {
 
-    private val nodeGenerator: NodeGenerator = NodeGenerator()
-
     def apply(bitStr: String): NodeId = {
         val (decVal, _) = bitStr.foldRight((BigInt(0), 0)) {
             case (c, (sum, index)) if c == '1' => (sum.setBit(index), index + 1)
             case (c, (sum, index)) if c == '0' => (sum, index + 1)
         }
 
-        new NodeId(decVal, bitStr.length())
+        NodeId(decVal, bitStr.length())
     }
 
     private def toUnsigned(bytes: Array[Byte]): BigInt = {
@@ -79,11 +75,11 @@ case object NodeId {
         _toUnsigned()
     }
 
-    def apply(byteArray: Array[Byte]): NodeId = {
+    def apply(byteArray: Array[Byte], nonce: BigInt): NodeId = {
         val decVal = toUnsigned(byteArray)
-        NodeId(decVal, byteArray.length * 8)
+        NodeId(decVal, byteArray.length * 8, nonce)
     }
 
-    def apply(host: Host): NodeId = nodeGenerator.generateId(host.hostname, host.port)
+    def apply(byteArray: Array[Byte]): NodeId = NodeId(byteArray, BigInt(0))
 
 }

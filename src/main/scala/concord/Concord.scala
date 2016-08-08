@@ -1,7 +1,7 @@
 package concord
 
 import akka.actor.ActorSystem
-import concord.identity.NodeId
+import concord.identity.{KeyDecoder, Puzzle}
 import concord.kademlia.{JoiningKadActor, KademliaActor}
 import concord.util.Logging
 
@@ -11,9 +11,18 @@ class Concord(config: ConcordConfig) extends Logging {
 
     private val actorSystem = ActorSystem(config.systemName)
 
-    val nodeId = config.nodeId match {
-        case s if s.isEmpty => NodeId(config.host)
-        case s: String => NodeId(s)
+    private val puzzle = Puzzle(config.identityConfig.hashAlgo, config.identityConfig.c1)
+
+    val (keyPair, nodeId) = config.identityConfig.public match {
+        case s if s.isEmpty => puzzle.newId(config.identityConfig.keyAlgo, config.identityConfig.c2)
+        case pubKey: String =>
+            val keys = KeyDecoder.keyPair(pubKey, config.identityConfig.secret, config.identityConfig.keyAlgo)
+            val node = puzzle.pkNonceToNode(keys.getPublic, BigInt(config.identityConfig.xnonce))
+            if (puzzle.verify(node, config.identityConfig.c2)) {
+                (keys, node)
+            } else {
+                throw new RuntimeException(s"Submitted public key is not valid for current identity parameters:\nPK: $pubKey")
+            }
     }
 
     private val kadNode = config.existingNode match {
