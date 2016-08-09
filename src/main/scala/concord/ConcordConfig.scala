@@ -4,7 +4,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import concord.identity.NodeId
 import concord.kademlia.routing.RemoteNode
 import concord.kademlia.routing.RoutingMessages.Node
-import concord.util.Host
+import concord.util.{Host, CaseClassPrinter}
 
 
 case class ConcordConfig(systemName: String,
@@ -13,7 +13,11 @@ case class ConcordConfig(systemName: String,
                          existingNode: Option[Node],
                          alpha: Int,
                          maxRounds: Int,
-                         identityConfig: IdentityConfig)
+                         identityConfig: IdentityConfig) extends CaseClassPrinter {
+
+    override def toString(indent: String): String = prettyStr[ConcordConfig](indent)
+
+}
 
 object ConcordConfig {
 
@@ -43,7 +47,16 @@ object ConcordConfig {
 }
 
 
-case class IdentityConfig(public: String, secret: String, xnonce: String, keyAlgo: String, hashAlgo: String, c1: Int, c2: Int)
+case class IdentityConfig(public: String,
+                          secret: String,
+                          xnonce: String,
+                          keyAlgo: String,
+                          hashAlgo: String,
+                          c1: Int, c2: Int) extends CaseClassPrinter {
+
+    override def toString(indent: String): String = prettyStr[IdentityConfig](indent)
+
+}
 
 object IdentityConfig {
 
