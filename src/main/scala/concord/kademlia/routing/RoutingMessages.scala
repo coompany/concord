@@ -23,16 +23,28 @@ object RoutingMessages {
             (JsPath \ "port").read[Int]
         )((h, p) => Host(h, p))
 
+    // NodeId writes / reads
+    implicit val nodeIdWrites = new Writes[NodeId] {
+        override def writes(o: NodeId): JsValue = Json.obj(
+            "id" -> o.toBitString,
+            "nonce" -> o.nonce.toString
+        )
+    }
+    implicit val nodeIdReads: Reads[NodeId] = (
+            (JsPath \ "id").read[String] and
+            (JsPath \ "nonce").read[String]
+        )((id, nonce) => NodeId(id, nonce))
+
     // RemoteNode writes / reads
     implicit val remoteNodeWrites = new Writes[RemoteNode] {
         override def writes(o: RemoteNode): JsValue = Json.obj(
             "host" -> o.host,
-            "nodeId" -> o.nodeId.toString
+            "nodeId" -> o.nodeId
         )
     }
     implicit val remoteNodeReads: Reads[RemoteNode] = (
             (JsPath \ "host").read[Host] and
-            (JsPath \ "nodeId").read[String].map(NodeId(_))
+            (JsPath \ "nodeId").read[NodeId]
         )((h, n) => RemoteNode(h, n))
 
 
@@ -75,14 +87,14 @@ object RoutingMessages {
     implicit val findNodeWrites = new Writes[FindNode] {
         override def writes(o: FindNode): JsValue = Json.obj(
             rpcJsonKey -> "find_node",
-            "searchId" -> o.searchId.toString,
+            "searchId" -> o.searchId,
             senderJsonKey -> o.sender,
             "local" -> o.local
         )
     }
     implicit val findNodeReads: Reads[FindNode] = (
             (JsPath \ rpcJsonKey).read[String] and
-            (JsPath \ "searchId").read[String].map(NodeId(_)) and
+            (JsPath \ "searchId").read[NodeId] and
             (JsPath \ senderJsonKey).read[Node] and
             (JsPath \ "local").read[Boolean]
         )((_, id, s, l) => FindNode(s, id, l))
@@ -91,14 +103,14 @@ object RoutingMessages {
     implicit val findNodeReplyWrites = new Writes[FindNodeReply] {
         override def writes(o: FindNodeReply): JsValue = Json.obj(
             rpcJsonKey -> "find_node_reply",
-            "searchId" -> o.searchId.toString,
+            "searchId" -> o.searchId,
             "nodes" -> o.nodes,
             senderJsonKey -> o.sender
         )
     }
     implicit val findNodeReplyReads: Reads[FindNodeReply] = (
             (JsPath \ rpcJsonKey).read[String] and
-            (JsPath \ "searchId").read[String].map(NodeId(_)) and
+            (JsPath \ "searchId").read[NodeId] and
             (JsPath \ "nodes").read[List[Node]] and
             (JsPath \ senderJsonKey).read[Node]
         )((_, id, n, s) => FindNodeReply(s, id, n))

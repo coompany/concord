@@ -35,16 +35,12 @@ class ListenerActor(selfNode: Node, parentActor: ActorRef) extends Actor with Ac
 
     private def handleRpcType(implicit json: JsValue, remote: InetSocketAddress) = (json \ rpcJsonKey).as[String] match {
         case "ping" =>
-            log.info(s"Got ping request from $remote: $json")
             handleJsonParsing(json.validate[PingRequest])
         case "pong" =>
-            log.info(s"Got pong reply from $remote: $json")
             handleJsonParsing(json.validate[PongReply])
         case "find_node" =>
-            log.info(s"Got find node from $remote: $json")
             handleJsonParsing(json.validate[FindNode])
         case "find_node_reply" =>
-            log.info(s"Got find node reply from $remote: $json")
             handleJsonParsing(json.validate[FindNodeReply])
     }
 

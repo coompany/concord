@@ -3,14 +3,14 @@ package concord.identity
 import scala.annotation.tailrec
 
 
-case class NodeId(id: BigInt, size: Int, xNonce: BigInt = BigInt(0)) {
+case class NodeId(id: BigInt, size: Int, nonce: BigInt = BigInt(0)) {
 
     val byteArray = id.toByteArray match {
         case x if x.length != size => x.takeRight(size / 8)
         case x => x
     }
 
-    override def toString = str
+    def toBitString = str
 
     lazy val str = {
         val binary = id.toString(2)
@@ -60,13 +60,13 @@ case class NodeId(id: BigInt, size: Int, xNonce: BigInt = BigInt(0)) {
 
 case object NodeId {
 
-    def apply(bitStr: String): NodeId = {
+    def apply(bitStr: String, nonceStr: String): NodeId = {
         val (decVal, _) = bitStr.foldRight((BigInt(0), 0)) {
             case (c, (sum, index)) if c == '1' => (sum.setBit(index), index + 1)
             case (c, (sum, index)) if c == '0' => (sum, index + 1)
         }
 
-        NodeId(decVal, bitStr.length())
+        NodeId(decVal, bitStr.length(), BigInt(nonceStr))
     }
 
     private def toUnsigned(bytes: Array[Byte]): BigInt = {

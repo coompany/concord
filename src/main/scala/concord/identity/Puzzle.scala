@@ -43,7 +43,7 @@ class Puzzle(hashAlgo: String, c1: Int) {
 
     def verifyStatic(nodeId: NodeId): Boolean = testP(NodeId(digest.digest(nodeId.byteArray)), c1)
 
-    def verifyDynamic(nodeId: NodeId, c2: Int): Boolean = testP(NodeId(digest.digest((nodeId.id ^ nodeId.xNonce).toByteArray)), c2)
+    def verifyDynamic(nodeId: NodeId, c2: Int): Boolean = testP(NodeId(digest.digest((nodeId.id ^ nodeId.nonce).toByteArray)), c2)
 
     def verify(nodeId: NodeId, c2: Int): Boolean = verifyStatic(nodeId) && verifyDynamic(nodeId, c2)
 

@@ -32,8 +32,6 @@ object KademliaActor {
 
     val nodeName = "concordKademlia"
 
-    implicit val timeout: Timeout = 5 seconds
-
 }
 
 class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends FSM[State, Data] {
@@ -55,7 +53,6 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
 
     protected def waitForSender: StateFunction = {
         case Event(SenderReady, _) =>
-            log.info("Sender actor is ready")
             initMessage()
             afterSenderState
     }
@@ -69,10 +66,8 @@ class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends F
 
     protected def remoteReply: PartialFunction[Event, Unit] = {
         case Event(message: Message, _) =>
-            log.info(s"Got request $message, forwarding to routing actor")
             routingActor forward message
         case Event(request: ListenerMessage, _) =>
-            log.info(s"Got listener message, forwarding ${request.message}")
             self forward request.message
     }
 
@@ -104,7 +99,6 @@ class JoiningKadActor[V](nodeId: NodeId, existingNode: Node)(implicit config: Co
             self ! existingNode
             stay
         case Event(remoteNode: Node, Empty) =>
-            log.info("Sending ping request")
             senderActor ! SenderMessage(remoteNode, PingRequest(selfNode))
             goto(Joining)
     }

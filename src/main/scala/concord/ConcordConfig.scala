@@ -22,14 +22,15 @@ case class ConcordConfig(systemName: String,
 object ConcordConfig {
 
     val config = ConfigFactory.load()
+    val bootstrapConfig = config.getConfig("concord.bootstrap")
 
-    val joining = config.getBoolean("concord.bootstrap.joining")
+    val joining = bootstrapConfig.getBoolean("joining")
 
     val bootstrapHost = joining match {
         case true => Some(
             RemoteNode(
-                Host(config.getString("concord.bootstrap.hostname"), config.getInt("concord.bootstrap.port")),
-                NodeId(config.getString("concord.bootstrap.nodeId"))
+                Host(bootstrapConfig.getString("hostname"), bootstrapConfig.getInt("port")),
+                NodeId(bootstrapConfig.getString("nodeId"), bootstrapConfig.getString("nonce"))
             ))
         case false => None
     }

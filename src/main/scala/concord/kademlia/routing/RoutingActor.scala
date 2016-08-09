@@ -25,7 +25,7 @@ class RoutingActor(selfNode: RoutingMessages.Node, senderActor: ActorRef)(implic
     implicit val askTimeout: Timeout = 5 seconds
 
     private val kBucketActor = context.actorOf(newKBucketActor(selfNode), "kBucketActor")
-    private val activeLookups = mutable.Map[NodeId, ActorRef]()
+    private val activeLookups = mutable.Map.empty[NodeId, ActorRef]
 
     private def newLookupActor: Props = newLookupActor(selfNode, context.self, senderActor, kBucketActor, config.bucketsCapacity, config.alpha, config.maxRounds)
 
@@ -39,21 +39,21 @@ class RoutingActor(selfNode: RoutingMessages.Node, senderActor: ActorRef)(implic
             addToBuckets(request.sender)
             val lookupActor = context.actorOf(newLookupActor, "lookupActor")
             activeLookups += request.searchId -> lookupActor
+            log.info(s"Active lookups:\n$activeLookups")
             lookupActor forward request
         case FindNode(senderNode, searchId, _) =>
-            log.info(s"Got local find node request for $searchId")
+            log.info(s"Got local find node request for $searchId from $senderNode")
             addToBuckets(senderNode)
             kBucketActor.ask(FindKClosest(searchId)).onComplete {
                 case Success(reply: FindKClosestReply[RemoteNode]) =>
-                    log.info(s"Sent local find node response for $searchId")
                     senderActor ! SenderMessage(senderNode, FindNodeReply(selfNode, reply.searchId, reply.nodes))
                 case Failure(exp) => throw exp
             }
-        case reply @ FindNodeReply(sender, searchId, nodes) =>
+        case FindNodeReply(sender, searchId, nodes) =>
             activeLookups.get(searchId) match {
                 case Some(actor) =>
                     actor ! FindKClosestReply(sender, searchId, nodes)
-                case _ => log.info(s"Got find node reply but no active lookup actor\n$reply")
+                case _ => log.warning(s"Got find node reply but no active lookup actor for $searchId")
             }
         case LookupDone(searchId) =>
             activeLookups -= searchId

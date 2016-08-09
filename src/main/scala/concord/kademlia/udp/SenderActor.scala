@@ -15,7 +15,6 @@ class SenderActor(parentActor: ActorRef) extends Actor with ActorLogging {
 
     override def receive: Receive = {
         case Udp.SimpleSenderReady =>
-            log.info(s"Sender actor now ready $parentActor")
             parentActor ! SenderReady
             context become ready(sender)
     }
@@ -33,7 +32,6 @@ class SenderActor(parentActor: ActorRef) extends Actor with ActorLogging {
 
     private def getSend(message: JsValue, remote: Node): Udp.Send = {
         val toSendMsg = message.as[JsObject] + (recipientJsonKey -> Json.toJson[Node](remote))
-        log.info(s"Sending $toSendMsg to $remote")
         Udp.Send(ByteString(toSendMsg.toString), remote.host.toSocketAddress)
     }
 

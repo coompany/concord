@@ -19,6 +19,7 @@ case $1 in
         fi
         echo "Starting join on port ${port}"
         CONCORD_BOOT_ID="1100001001000111000001101111100000011000001111000101011101110111010101010011010101100010110101001100101010010000010111100100001000110000111101111100001011101101" \
+            CONCORD_BOOT_NONCE="537447733960778879600970818141904316893166563717" \
             ./target/universal/stage/bin/concord -Dconcord.bootstrap.joining=true -Dconcord.port=${port}
         exit 0
         ;;
