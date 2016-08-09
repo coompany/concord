@@ -1,17 +1,14 @@
 package concord.kademlia
 
 import akka.actor.{FSM, Props}
-import akka.util.Timeout
 import concord.ConcordConfig
-import concord.identity.NodeId
+import concord.identity.{NodeId, Puzzle}
 import concord.kademlia.KademliaActor._
 import concord.kademlia.routing.RoutingMessages._
 import concord.kademlia.routing.{RemoteNode, RoutingActor}
 import concord.kademlia.udp.ListenerActor.ListenerMessage
 import concord.kademlia.udp.SenderActor.{SenderMessage, SenderReady}
 import concord.kademlia.udp.{ListenerActor, SenderActor}
-
-import scala.concurrent.duration._
 
 
 object KademliaActor {
@@ -26,20 +23,20 @@ object KademliaActor {
     case object Empty extends Data
 
     trait Provider {
-        def newKademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) =
-            Props(new KademliaActor[V](nodeId) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
+        def newKademliaActor[V](nodeId: NodeId, puzzle: Puzzle)(implicit config: ConcordConfig) =
+            Props(new KademliaActor[V](nodeId, puzzle) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
     }
 
     val nodeName = "concordKademlia"
 
 }
 
-class KademliaActor[V](nodeId: NodeId)(implicit config: ConcordConfig) extends FSM[State, Data] {
+class KademliaActor[V](nodeId: NodeId, puzzle: Puzzle)(implicit config: ConcordConfig) extends FSM[State, Data] {
     this: SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider =>
 
     protected val selfNode = RemoteNode(config.host, nodeId)
 
-    protected val listenerActor = context.actorOf(newListenerActor(selfNode, context.self), "listenerActor")
+    protected val listenerActor = context.actorOf(newListenerActor(selfNode, context.self, puzzle.verifyFn(config.identityConfig.c2)), "listenerActor")
     protected val senderActor = context.actorOf(newSenderActor(context.self), "senderActor")
     protected val routingActor = context.actorOf(newRoutingActor(selfNode, senderActor), "routingActor")
 
@@ -80,13 +77,13 @@ object JoiningKadActor {
     case object Joining extends State
 
     trait Provider extends KademliaActor.Provider {
-        def newJoiningKademliaActor[V](nodeId: NodeId, existingNode: Node)(implicit config: ConcordConfig) =
-            Props(new JoiningKadActor[V](nodeId, existingNode) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
+        def newJoiningKademliaActor[V](nodeId: NodeId, puzzle: Puzzle, existingNode: Node)(implicit config: ConcordConfig) =
+            Props(new JoiningKadActor[V](nodeId, puzzle, existingNode) with SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider)
     }
 
 }
 
-class JoiningKadActor[V](nodeId: NodeId, existingNode: Node)(implicit config: ConcordConfig) extends KademliaActor[V](nodeId) {
+class JoiningKadActor[V](nodeId: NodeId, puzzle: Puzzle, existingNode: Node)(implicit config: ConcordConfig) extends KademliaActor[V](nodeId, puzzle) {
     this: SenderActor.Provider with ListenerActor.Provider with RoutingActor.Provider =>
 
     import JoiningKadActor._

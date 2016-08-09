@@ -2,6 +2,8 @@ package concord.identity
 
 import java.security._
 
+import concord.identity.Puzzle.VerifyFunction
+
 import scala.annotation.tailrec
 
 
@@ -47,6 +49,8 @@ class Puzzle(hashAlgo: String, c1: Int) {
 
     def verify(nodeId: NodeId, c2: Int): Boolean = verifyStatic(nodeId) && verifyDynamic(nodeId, c2)
 
+    def verifyFn(c2: Int): VerifyFunction = (nodeId) => verify(nodeId, c2)
+
     def newId(keyAlgo: String, c2: Int): (KeyPair, NodeId) = {
         val pair = findPair(keyAlgo)
         val nonce = findX(pair.getPublic, c2)
@@ -59,5 +63,7 @@ class Puzzle(hashAlgo: String, c1: Int) {
 object Puzzle {
 
     def apply(hashAlgo: String, c1: Int): Puzzle = new Puzzle(hashAlgo, c1)
+
+    type VerifyFunction = NodeId => Boolean
 
 }

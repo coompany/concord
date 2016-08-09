@@ -26,8 +26,8 @@ class Concord(config: ConcordConfig) extends Logging {
     }
 
     private val kadNode = config.existingNode match {
-        case Some(node) => actorSystem.actorOf(newJoiningKademliaActor[Int](nodeId, node)(config), KademliaActor.nodeName)
-        case _ => actorSystem.actorOf(newKademliaActor[Int](nodeId)(config), KademliaActor.nodeName)
+        case Some(node) => actorSystem.actorOf(newJoiningKademliaActor[Int](nodeId, puzzle, node)(config), KademliaActor.nodeName)
+        case _ => actorSystem.actorOf(newKademliaActor[Int](nodeId, puzzle)(config), KademliaActor.nodeName)
     }
 
     actorSystem.actorOf(newWatchActor(kadNode), "watcherActor")
