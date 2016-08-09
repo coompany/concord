@@ -1,2 +1,2 @@
-# concord
-Raft consensus protocol implementation
+# Concord
+###### Nothing to add at the moment
