@@ -1,0 +1,16 @@
+---
+title: Concord - A Distributed Voting Protocol
+author: acidghost
+bibliography: bib.bibtex
+---
+
+# Network
+Based on Kademlia [@maymounkov2002kademlia] and its extension S/Kademlia [@baumgart2007s].
+
+
+# Voting specs
+Bla bla bla...
+
+
+
+# References
