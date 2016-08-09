@@ -53,6 +53,7 @@ case class IdentityConfig(public: String,
                           xnonce: String,
                           keyAlgo: String,
                           hashAlgo: String,
+                          signatureAlgo: String,
                           c1: Int, c2: Int) extends CaseClassPrinter {
 
     override def toString(indent: String): String = prettyStr[IdentityConfig](indent)
@@ -67,6 +68,7 @@ object IdentityConfig {
         config.getString("xnonce"),
         config.getString("algorithms.keys"),
         config.getString("algorithms.hash"),
+        config.getString("algorithms.sign"),
         config.getInt("c1"), config.getInt("c2")
     )
 

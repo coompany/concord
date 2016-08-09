@@ -5,7 +5,7 @@ import java.security.{KeyFactory, KeyPair, PrivateKey, PublicKey}
 import java.util.Base64
 
 
-private class KeyDecoder(algorithm: String) {
+private[concord] class KeyDecoder(algorithm: String) {
 
     def publicKey(pubStr: String): PublicKey = {
         val keyFactory = KeyFactory.getInstance(algorithm)
@@ -28,5 +28,7 @@ object KeyDecoder {
         val decoder = new KeyDecoder(algorithm)
         new KeyPair(decoder.publicKey(pubStr), decoder.privateKey(secret))
     }
+
+    def apply(algorithm: String): KeyDecoder = new KeyDecoder(algorithm)
 
 }

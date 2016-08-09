@@ -61,6 +61,7 @@ object RoutingMessages {
     val rpcJsonKey = "rpc"
     val senderJsonKey = "sender"
     val recipientJsonKey = "recipient"      // used in sender and listener actors
+    val signatureJsonKey = "signature"
 
     // PingRequest writes / reads
     implicit val pingRequestWrites = new Writes[PingRequest] {
