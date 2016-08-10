@@ -1,1 +1,2 @@
 *.bibtex linguist-language=Tex
+*.pdoc linguist-language=Markdown
