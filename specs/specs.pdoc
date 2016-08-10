@@ -6,15 +6,15 @@ bibliography: bib.bibtex
 lang: en
 ---
 
-# Network
+## Network
 Based on Kademlia [@maymounkov2002kademlia] and its extension S/Kademlia [@baumgart2007s]. Each node is identified by a `nodeId` which is computed using a crypto puzzle. The puzzle generates also a key pair that
 is used to sign and verify integrity of messages.
 
 
-# Voting Protocol
+## Voting Protocol
 The goal of this protocol is to allow anyone to create a poll and collect opinions on it. Each node is itself a voter and
 everyone is free to participate in the voting process.
 
 
 
-# References
+## References
