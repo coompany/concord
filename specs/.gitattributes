@@ -1,0 +1,5 @@
+*.bibtex linguist-language=Tex
+*.pdoc linguist-language=Markdown
+*.md linguist-vendored
+plantuml.py linguist-vendored
+*.uml linguist-vendored

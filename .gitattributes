@@ -1,3 +1,0 @@
-*.bibtex linguist-language=Tex
-*.pdoc linguist-language=Markdown
-specs/README.md linguist-vendored

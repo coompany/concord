@@ -1,16 +1,11 @@
-Network
--------
+General info
+------------
 
-Based on Kademlia (Maymounkov and Mazieres 2002) and its extension S/Kademlia (Baumgart and Mies 2007). Each node is identified by a `nodeId` which is computed using a crypto puzzle. The puzzle generates also a key pair that is used to sign and verify integrity of messages.
+This folder contains the technical specification of the Concord protocol.
 
-Voting Protocol
----------------
+Sources of the specification are written in Pandoc's flavoured markdown and are compiled to Github's flavoured markdown so to be readable and hosted in the code repository directly.
 
-The goal of this protocol is to allow anyone to create a poll and collect opinions on it. Each node is itself a voter and everyone is free to participate in the voting process.
-
- References
+Compilation
 -----------
 
-Baumgart, Ingmar, and Sebastian Mies. 2007. “S/Kademlia: A Practicable Approach Towards Secure Key-Based Routing.” In *Parallel and Distributed Systems, 2007 International Conference on*, 2:1–8. IEEE.
-
-Maymounkov, Petar, and David Mazieres. 2002. “Kademlia: A Peer-to-Peer Information System Based on the Xor Metric.” In *International Workshop on Peer-to-Peer Systems*, 53–65. Springer.
+To compile this documentation (not only to markdown) you'll have to install Pandoc and two extensions: [`pandoc-citeproc`](https://github.com/jgm/pandoc-citeproc) and [`pandocfilters`](https://github.com/jgm/pandocfilters). To install Pandoc we remand to the official [installation page](http://pandoc.org/installing.html). `pandoc-citeproc` is distributed with the Linux x64 package of Pandoc, otherwise can be found in `apt` and `brew` or installed with `cabal install --global pandoc-citeproc`. `pandocfilters` can instead be installed with `pip install pandocfilters`. We will also need the plantuml jar file to enable writing UML diagrams in Pandoc files. The latter can be downloaded from the [official website](http://plantuml.com/download.html).
